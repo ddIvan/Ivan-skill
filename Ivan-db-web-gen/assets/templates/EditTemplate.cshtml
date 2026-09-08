@@ -1,0 +1,58 @@
+
+@using {{MODELS_NAMESPACE}}
+@using Newtonsoft.Json
+
+@{
+    ViewData["Title"] = "Edit";
+    Layout = "~/Views/Shared/_LayoutEdit.cshtml";    
+}
+@if (!Model.Success)
+{
+    <div>错误了：@Model.Message</div>
+}
+else
+{
+<el-form :model="formObj" ref="editForm" label-width="140px" style="width:98%" :rules="rules">        
+    {{FIELDS_EDIT}}
+</el-form>
+
+
+
+@section Section_Vue{
+<script type="text/javascript">    
+    new LayoutEdit({
+        el: "#app",
+        data() {
+            return {
+                formObj: @Html.Raw(ViewBag.ModelString),
+                rules: {
+                        {{RULES}}
+                   }
+            }
+        },
+        methods: {
+             BeforeSubmit() {
+                       //这里可以做提交前的操作
+                       //比如 某些字段的判断  某些值的处理
+                  
+                    return true;
+
+
+                }
+        },
+        updated: function () {
+
+
+        },
+        mounted: function () { 
+        
+                
+        }
+
+    })
+
+</script>
+
+}
+
+}

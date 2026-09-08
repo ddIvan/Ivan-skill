@@ -1,0 +1,20 @@
+[project]
+name = "ivan-mcp-db-model-gen"
+version = "1.0.0"
+description = "MCP 服务：连接数据库，通过 GUI 选择表和字段，生成 .NET Model 层代码"
+requires-python = ">=3.10"
+dependencies = [
+    "fastmcp>=3.2.0",
+    "pymssql>=2.3.0",
+    "pymysql>=1.1.0",
+]
+
+[project.scripts]
+ivan-mcp-db-model-gen = "server:main"
+
+[tool.setuptools]
+py-modules = ["server", "gui", "db_connector", "type_mapping", "code_generator"]
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"

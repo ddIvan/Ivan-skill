@@ -1,0 +1,25 @@
+# 依赖
+node_modules/
+
+# Python 缓存与构建产物
+__pycache__/
+*.pyc
+*.egg-info/
+
+# 构建产物
+dist/
+bin/
+obj/
+
+# IDE / 工具
+.codebuddy/
+.vs/
+.vscode/
+.idea/
+
+# 本地数据 / 敏感信息
+.conn_history.json
+
+# 系统文件
+Thumbs.db
+.DS_Store

@@ -1,0 +1,124 @@
+
+@using Newtonsoft.Json
+@using {{MODELS_NAMESPACE}}
+
+@{
+    ViewBag.Title = "List";
+    Layout = "~/Views/Shared/_LayoutList.cshtml";
+    ViewData["IsPage"] = true;
+    ViewData["PageSize"] = 20;
+    ViewData["ShowAddBtn"] = true;
+    ViewData["ShowEditBtn"] = true;
+    ViewData["ShowDeleteBtn"] = true;
+    ViewData["ShowCheckBox"] = true;
+    ViewData["DataSourceUrl"] = Url.RouteUrl("areas", new { action = "List", controller = "{{TABLE_NAME}}" });
+}
+
+@section Section_Head
+{
+
+
+}
+
+@section Section_TableHeader {
+{{FIELDS_LIST}}
+}
+
+@* 每列右边的扩展命令字段，用scope.row传递行数据 *@
+@section Section_CustomOperate{
+    @* <el-tooltip placement="top" effect="light">
+            <div slot="content">分配角色</div>
+            <el-button type="primary" @@click="showRight(scope.row)" icon="el-icon-user-solid" size="mini" circle></el-button>
+      </el-tooltip>     
+    *@
+}
+   @* 列表左上角的功能按钮，用this.multipleSelection获取勾选的行 *@
+@section Section_ToolBar_Extend {
+
+
+}
+
+@* 用于搜索查询的条件区 *@
+@section Section_Condition_Extend {
+    
+}
+
+
+
+@section Section_Vue {
+<script type="text/javascript">
+
+    new Ctor({
+        el: "#app",
+        data: {            
+                        
+        },
+
+        methods: {
+            Query() {
+                this.reload({
+                    // UserName:this.s_UserName
+                    
+                },"post");
+            },
+            
+            HandleAddClick() {
+                var self = this;
+                 top.OpenEditDialog({
+                    title: "创建",
+                    url: '@Url.RouteUrl("areas",new { action="Add",controller="{{TABLE_NAME}}"})',
+                    width: "50%",
+                    height: "700",
+                    callback: function () {
+                        self.Query();
+                    }
+                });
+
+
+            },
+            HandleUpdateClick(row) {
+                var self = this;
+                 top.OpenEditDialog({
+                    title: "编辑",
+                    url: '@Url.RouteUrl("areas",new { action="Edit",controller="{{TABLE_NAME}}"})/'+row.ID,
+                    width: "50%",
+                    height: 700,
+                    callback: function () {
+                        self.Query();
+                    }
+                });
+
+
+            },
+
+            HandleDeleteClick(row) {
+                this.HandleDelete('@Url.RouteUrl("areas",new { action="Delete",controller="{{TABLE_NAME}}"})/' + row.ID);
+            },
+
+            showRight(row) {
+                @*
+                //do somethingelse
+                    top.OpenEditDialog({
+                        title: "为“"+ row.Username +"”分配角色",
+                        url: '@Url.RouteUrl("areas",new { action="Detail",controller="{{TABLE_NAME}}"})/' + row.ID,
+                        width: "50%",
+                        height: "500",
+                        callback: function () {
+                            //window.location.reload();
+                        }
+                    });
+                *@
+            },
+            
+        },
+        mounted() {
+            this.Query();
+
+        }
+
+
+
+    });
+</script>
+
+}

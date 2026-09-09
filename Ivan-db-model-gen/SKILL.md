@@ -127,7 +127,7 @@ MCP 返回的 JSON 格式（**仅元数据，不含代码**）：
     "Users": [
       {"name": "Id", "db_type": "int", "is_nullable": false, "description": "主键ID"},
       {"name": "Name", "db_type": "varchar", "is_nullable": true, "description": "用户名"},
-      {"name": "CreatedAt", "db_type": "datetime", "is_nullable": true, "description": ""}
+      {"name": "CreateTime", "db_type": "datetime", "is_nullable": true, "description": ""}
     ],
     "Orders": [
       {"name": "Id", "db_type": "int", "is_nullable": false, "description": ""},

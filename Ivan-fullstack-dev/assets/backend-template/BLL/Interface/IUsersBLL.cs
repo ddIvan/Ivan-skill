@@ -19,4 +19,8 @@ public interface IUsersBLL : IBaseBLL<Users>
     PageResultModel<List<Users>> List(PageSearchModel searchModel);
     List<Users> GetALL();
     ResultModel<int> Create(Users model);
+    Users? GetById(int id);
+    Users? GetByUserName(string userName);
+    ResultModel Modify(Users model);
+    ResultModel Remove(int id);
 }

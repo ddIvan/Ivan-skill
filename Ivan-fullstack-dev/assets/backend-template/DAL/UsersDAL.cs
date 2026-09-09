@@ -26,15 +26,15 @@ public partial class UsersDAL
     {
     }
 
-    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, Role, CreatedAt, IsEnabled)
-                             VALUES (@UserName, @PasswordHash, @DisplayName, @Role, @CreatedAt, @IsEnabled)";
+    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, Role, CreateTime, IsEnabled)
+                             VALUES (@UserName, @PasswordHash, @DisplayName, @Role, @CreateTime, @IsEnabled)";
 
     protected override string InsertSqlForGeneratedKey => InsertSql + ";select SCOPE_IDENTITY();";
 
     protected override string DeleteSql => @"DELETE from Users WHERE Id = @Id";
 
     protected override string UpdateSql => @"UPDATE Users SET UserName=@UserName, PasswordHash=@PasswordHash, DisplayName=@DisplayName, 
-                                    Role=@Role, CreatedAt=@CreatedAt, IsEnabled=@IsEnabled
+                                    Role=@Role, CreateTime=@CreateTime, IsEnabled=@IsEnabled
                                     where Id = @Id";
 
     protected override string SelectAllSql => @"select * from Users (nolock)";

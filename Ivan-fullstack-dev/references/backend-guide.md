@@ -119,7 +119,7 @@ public partial class UsersBLL : BaseBLL<IUsersDAL, Users>, IUsersBLL
 ### 示例：标准 Controller 文件头部（对照模板 Controllers/UserController.cs）
 
 ```csharp
-using IvanTest.BLL;        // UserManageService / AuthService
+using IvanTest.BLL;        // UsersBLL / AuthService
 using IvanTest.Common;     // ApiResult / PageResult
 using IvanTest.Models;     // Users
 using Microsoft.AspNetCore.Authorization;
@@ -174,7 +174,7 @@ builder.Host.AddIvanIOC(assemblies,
         // ③ 手动编写的服务（无 [InjectIOC] 接口的普通类）在此注册，
         //    其构造函数依赖（如 IUsersBLL）由容器自动解析
         services.AddScoped<AuthService>();
-        services.AddScoped<UserManageService>();
+        services.AddScoped<UsersBLL>();
 
         // JWT / CORS 配置...
     });
@@ -198,7 +198,7 @@ app.Run();
 **关键规则：**
 
 1. **禁止直接注册带 `[InjectIOC]` 接口的类**（如 `services.AddScoped<UsersBLL>()`）——`AddIvanIOC` 会自动注册 `IUsersBLL → UsersBLL`，重复注册会导致歧义。
-2. **`AuthService` / `UserManageService` 等手动服务注入的是接口**（`IUsersBLL`），由 AddIvanIOC 注册的接口绑定解析。
+2. **`AuthService` / `UsersBLL` 等手动服务注入的是接口**（`IUsersBLL`），由 AddIvanIOC 注册的接口绑定解析。
 3. **`DatabaseInfo.Set*Database("default", conn)` 必须在任何容器构建之前调用**，key 固定为 `"default"`。
 4. **`ContextHelper.UseServiceProvider = false`** 固定为 Autofac 模式（与 SaminWeb 一致）。
 5. 不使用 EF Core `EnsureCreated()` 自动建表；Ivan.Data 的 `BaseDAL` 只负责 CRUD，表结构需提前创建。
@@ -217,7 +217,7 @@ backend/
 │   ├── Interface/     #   IUsersBLL 等（[InjectIOC]）
 │   ├── UsersBLL.cs    #   BaseBLL 实现 + partial 扩展
 │   ├── AuthService.cs #   手动编写（注入 IUsersBLL）
-│   └── UserManageService.cs
+│   └── UsersBLL.cs
 ├── DTOs/              # 入参/出参对象
 ├── Controllers/       # API 控制器（薄，只做参数校验+调用 BLL）
 ├── Common/            # 统一响应、异常中间件、工具

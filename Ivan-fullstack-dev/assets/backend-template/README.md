@@ -37,7 +37,7 @@ backend/
 │   ├── Interface/     # IUsersBLL（[InjectIOC] 标注）
 │   ├── UsersBLL.cs    # BaseBLL<IUsersDAL, Users> 实现
 │   ├── AuthService.cs        # 手动编写（注入 IUsersBLL，登录/JWT）
-│   └── UserManageService.cs  # 手动编写（封装 IUsersBLL 的 CRUD 示例）
+│   └── UsersBLL.cs  # 手动编写（封装 IUsersBLL 的 CRUD 示例）
 ├── DTOs/              # 入参/出参（LoginRequest / LoginResult / RegisterRequest）
 ├── Controllers/       # 薄控制器（AuthController / UserController 示例）
 ├── Common/            # ApiResult / BusinessException / ExceptionMiddleware
@@ -49,7 +49,7 @@ backend/
 ## 依赖注入机制（Ivan.IOC）
 
 - `Program.cs` 调用 `builder.Host.AddIvanIOC(程序集数组, ...)`，自动扫描程序集中 `[InjectIOC]` 标注的接口（`IUsersBLL` / `IUsersDAL`），注册其实现类（`UsersBLL` / `UsersDAL`）。
-- **手动编写的服务**（`AuthService` / `UserManageService`）无 `[InjectIOC]` 接口，在 `Program.cs` 的 `services.AddScoped<...>()` 注册；其构造函数注入的 `IUsersBLL` 由容器自动解析。
+- **手动编写的服务**（`AuthService` / `UsersBLL`）无 `[InjectIOC]` 接口，在 `Program.cs` 的 `services.AddScoped<...>()` 注册；其构造函数注入的 `IUsersBLL` 由容器自动解析。
 - **禁止**再手动注册带 `[InjectIOC]` 接口的实现类（如 `services.AddScoped<UsersBLL>()`），会导致重复注册。
 
 ## 新增业务模块的标准步骤

@@ -85,7 +85,7 @@ public class AuthService
             DisplayName = displayName ?? userName,
             Role = "user",
             IsEnabled = true,
-            CreatedAt = DateTime.Now
+            CreateTime = DateTime.Now
         };
         // 使用 BLL 的 Create 方法（内部调用 DAL.InsertForGeneratedKey）
         var result = _usersBLL.Create(user);

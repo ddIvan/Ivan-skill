@@ -14,7 +14,7 @@ using IvanProject.BLL.Interface;
 namespace IvanProject.BLL;
 
 /// <summary>
-/// Users操作类（BaseBLL 提供 Add/Select/Update/Delete 等通用方法）
+/// Users操作类（标准 CRUD + 分页 + 搜索模式，新业务模块参照此写法）
 /// </summary>
 public partial class UsersBLL
     : BaseBLL<IUsersDAL, Users>, IUsersBLL
@@ -23,7 +23,7 @@ public partial class UsersBLL
     {
     }
 
-    /// <summary>通过会话工厂创建 DAL 执行查询的标准写法</summary>
+    /// <summary>全量查询（会话内创建 DAL 执行）</summary>
     public List<Users> GetALL()
     {
         using (var session = Factory.OpenSession())
@@ -32,7 +32,7 @@ public partial class UsersBLL
         }
     }
 
-    /// <summary>分页查询（内部调用 DAL.Search）</summary>
+    /// <summary>分页查询（内部调用 DAL.Search，支持 keyword 过滤）</summary>
     public PageResultModel<List<Users>> List(PageSearchModel searchModel)
     {
         var result = new PageResultModel<List<Users>>();
@@ -40,7 +40,7 @@ public partial class UsersBLL
         {
             var list = session.CreateDAL<IUsersDAL>().Search(searchModel, out int total);
             result.Data = list;
-            result.Count = total;
+            result.TotalRecord = total;
         }
         return result;
     }
@@ -55,5 +55,42 @@ public partial class UsersBLL
             // 否则调用方 !result.Success 会误判为失败（抛出空消息的 BusinessException）
             return ResultModel<int>.BuildSuccess(id);
         }
+    }
+
+    /// <summary>按主键查询</summary>
+    public Users? GetById(int id)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            return session.CreateDAL<IUsersDAL>().Select(new Users { Id = id });
+        }
+    }
+
+    /// <summary>按用户名查询（用于唯一性校验）</summary>
+    public Users? GetByUserName(string userName)
+    {
+        var lower = userName?.ToLower();
+        return GetALL().FirstOrDefault(u => u.UserName.ToLower() == lower);
+    }
+
+    /// <summary>修改用户</summary>
+    public ResultModel Modify(Users model)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            session.CreateDAL<IUsersDAL>().Update(model);
+        }
+        // 默认 ResultModel 的 Success=false，这里必须显式 BuildSuccess
+        return ResultModel.BuildSuccess();
+    }
+
+    /// <summary>删除用户</summary>
+    public ResultModel Remove(int id)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            session.CreateDAL<IUsersDAL>().Delete(new Users { Id = id });
+        }
+        return ResultModel.BuildSuccess();
     }
 }

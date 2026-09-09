@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
 
-namespace IvanTest.Common;
+namespace IvanProject.Common;
 
 /// <summary>
 /// DateTime 统一序列化为 yyyy-MM-dd（反序列化兼容 yyyy-MM-dd 与完整时间戳）

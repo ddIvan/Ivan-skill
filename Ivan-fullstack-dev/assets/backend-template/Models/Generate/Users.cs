@@ -29,7 +29,7 @@ public partial class Users
     public string Role { get; set; } = "user";
 
     /// <summary>创建时间</summary>
-    public DateTime? CreatedAt { get; set; }
+    public DateTime? CreateTime { get; set; }
 
     /// <summary>是否启用</summary>
     public bool? IsEnabled { get; set; }

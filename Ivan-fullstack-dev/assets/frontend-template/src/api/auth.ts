@@ -9,6 +9,9 @@ export interface LoginResult {
   token: string
   userName: string
   displayName: string
+  role: string
+  menuIds: number[]
+  buttonPermissions: Record<string, string[]>
 }
 
 /** 登录 */

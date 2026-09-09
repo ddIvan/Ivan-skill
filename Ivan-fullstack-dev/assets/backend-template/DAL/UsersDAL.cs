@@ -26,15 +26,15 @@ public partial class UsersDAL
     {
     }
 
-    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, Role, CreateTime, IsEnabled)
-                             VALUES (@UserName, @PasswordHash, @DisplayName, @Role, @CreateTime, @IsEnabled)";
+    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, Role, CreatedAt, IsEnabled)
+                             VALUES (@UserName, @PasswordHash, @DisplayName, @Role, @CreatedAt, @IsEnabled)";
 
     protected override string InsertSqlForGeneratedKey => InsertSql + ";select SCOPE_IDENTITY();";
 
     protected override string DeleteSql => @"DELETE from Users WHERE Id = @Id";
 
     protected override string UpdateSql => @"UPDATE Users SET UserName=@UserName, PasswordHash=@PasswordHash, DisplayName=@DisplayName, 
-                                    Role=@Role, CreateTime=@CreateTime, IsEnabled=@IsEnabled
+                                    Role=@Role, CreatedAt=@CreatedAt, IsEnabled=@IsEnabled
                                     where Id = @Id";
 
     protected override string SelectAllSql => @"select * from Users (nolock)";
@@ -50,14 +50,31 @@ public partial class UsersDAL
         return SelectFirst(sql, value);
     }
 
-    /// <summary>
-    /// 分页搜索（示例：全量查询后内存分页，大数据量表请改写为 SQL 分页）
-    /// </summary>
+    /// <summary>按用户名精准查询（SQL 层 WHERE，禁止全表加载后内存过滤）</summary>
+    public Users? GetByUserName(string userName)
+    {
+        string sql = "SELECT * FROM Users (nolock) WHERE UserName = @UserName";
+        return SelectFirst(sql, new { UserName = userName });
+    }
+
+    /// <summary>分页搜索（SQL 层分页，OFFSET/FETCH）</summary>
     public List<Users> Search(PageSearchModel searchModel, out int totalRecordCount)
     {
-        var list = SelectAll();
-        totalRecordCount = list.Count;
-        return list;
+        var builder = new SQLBuilder("select count(1) from Users (nolock)", SqlType);
+        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
+        {
+            builder.AddWhere("(UserName like '%' + @Keyword + '%' or DisplayName like '%' + @Keyword + '%')");
+        }
+        totalRecordCount = CountBySql(builder.SQL, builder.GetDynamicParameters(searchModel));
+
+        builder = new SQLBuilder("select * from Users (nolock)", SqlType);
+        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
+        {
+            builder.AddWhere("(UserName like '%' + @Keyword + '%' or DisplayName like '%' + @Keyword + '%')");
+        }
+        builder.AddOrderBy("Id desc");
+        builder.AddPageSize(searchModel.PageIndex, searchModel.PageSize);
+        return SelectList(builder.SQL, builder.GetDynamicParameters(searchModel)).ToList();
     }
 
     #endregion

@@ -84,6 +84,8 @@ builder.Host.AddIvanIOC(assemblies,
         //    其构造函数依赖（如 IUsersBLL）由容器自动解析。
         //    禁止再直接注册带 [InjectIOC] 接口的实现类（如 AddScoped<UsersBLL>()），会重复注册。
         services.AddScoped<AuthService>();
+        services.AddScoped<RolePermissionService>();
+        services.AddMemoryCache();
 
         // JWT 认证
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

@@ -38,10 +38,16 @@ const route = useRoute()
 const router = useRouter()
 const userStore = useUserStore()
 
-// TODO: 菜单数据可与路由表保持一致，或由后端返回动态菜单
+// 从路由表动态生成菜单，并根据用户 menuIds 权限过滤
+const menuFromRouter = router.options.routes
+  .find(r => r.path === '/')?.children
+  ?.filter(r => r.meta?.title && r.path !== 'home')
+  ?.map(r => ({ path: `/${r.path}`, title: r.meta?.title as string, icon: r.meta?.icon as string, menuId: r.meta?.menuId as number })) || []
+
 const menus = [
   { path: '/home', title: '首页', icon: 'HomeFilled' },
-  // { path: '/users', title: '用户管理', icon: 'User' },
+  // 仅展示用户在权限内的菜单
+  ...menuFromRouter.filter(m => userStore.menuIds.includes(m.menuId)),
 ]
 
 function handleCommand(command: string) {

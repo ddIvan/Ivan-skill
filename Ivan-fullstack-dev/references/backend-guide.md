@@ -119,7 +119,7 @@ public partial class UsersBLL : BaseBLL<IUsersDAL, Users>, IUsersBLL
 ### 示例：标准 Controller 文件头部（对照模板 Controllers/UserController.cs）
 
 ```csharp
-using IvanTest.BLL;        // UsersBLL / AuthService
+using IvanTest.BLL;        // UserManageService / AuthService
 using IvanTest.Common;     // ApiResult / PageResult
 using IvanTest.Models;     // Users
 using Microsoft.AspNetCore.Authorization;
@@ -174,7 +174,7 @@ builder.Host.AddIvanIOC(assemblies,
         // ③ 手动编写的服务（无 [InjectIOC] 接口的普通类）在此注册，
         //    其构造函数依赖（如 IUsersBLL）由容器自动解析
         services.AddScoped<AuthService>();
-        services.AddScoped<UsersBLL>();
+        services.AddScoped<UserManageService>();
 
         // JWT / CORS 配置...
     });
@@ -198,7 +198,7 @@ app.Run();
 **关键规则：**
 
 1. **禁止直接注册带 `[InjectIOC]` 接口的类**（如 `services.AddScoped<UsersBLL>()`）——`AddIvanIOC` 会自动注册 `IUsersBLL → UsersBLL`，重复注册会导致歧义。
-2. **`AuthService` / `UsersBLL` 等手动服务注入的是接口**（`IUsersBLL`），由 AddIvanIOC 注册的接口绑定解析。
+2. **`AuthService` / `UserManageService` 等手动服务注入的是接口**（`IUsersBLL`），由 AddIvanIOC 注册的接口绑定解析。
 3. **`DatabaseInfo.Set*Database("default", conn)` 必须在任何容器构建之前调用**，key 固定为 `"default"`。
 4. **`ContextHelper.UseServiceProvider = false`** 固定为 Autofac 模式（与 SaminWeb 一致）。
 5. 不使用 EF Core `EnsureCreated()` 自动建表；Ivan.Data 的 `BaseDAL` 只负责 CRUD，表结构需提前创建。
@@ -217,7 +217,7 @@ backend/
 │   ├── Interface/     #   IUsersBLL 等（[InjectIOC]）
 │   ├── UsersBLL.cs    #   BaseBLL 实现 + partial 扩展
 │   ├── AuthService.cs #   手动编写（注入 IUsersBLL）
-│   └── UsersBLL.cs
+│   └── UserManageService.cs
 ├── DTOs/              # 入参/出参对象
 ├── Controllers/       # API 控制器（薄，只做参数校验+调用 BLL）
 ├── Common/            # 统一响应、异常中间件、工具
@@ -271,19 +271,6 @@ return ResultModel<int>.BuildSuccess(id);          // 泛型（BuildSuccess 是�
 前端提交前必须把空日期归一化为 `null`：`payload = { ...form, hireDate: form.hireDate || null }`。
 另外注意数据库列名与模型属性名必须一致（如列 `CreateTime` 对应属性 `CreateTime`，不要凭空写 `CreatedAt`），
 INSERT/UPDATE 的 SQL 显式列出列名，列名写错会报"列名无效"。
-
-### 日期格式统一规范（yyyy-MM-dd）
-
-- 后端 JSON 输出统一 `yyyy-MM-dd`：模板 `Common/DateTimeJsonConverter.cs` 提供 `DateTimeJsonConverter` / `NullableDateTimeJsonConverter`
-  （序列化只输出日期部分，可空输出 null；反序列化兼容完整时间戳），必须在 Program.cs 的 `AddJsonOptions` 中注册（模板已注册）。
-- 前端 `<el-date-picker>` 统一 `type="date"` + `value-format="YYYY-MM-DD"`（不要用 datetime 带时分秒）；表格日期列宽约 110。
-
-### 接口测试中文乱码注意（测试工具问题）
-
-PowerShell 5.1 用 `-Body '含中文的json'` 发送请求时默认按 ASCII 编码，中文会入库为 `??`（码点 63）。
-测试时必须用 UTF-8 字节发送：`Invoke-WebRequest ... -Body ([System.Text.Encoding]::UTF8.GetBytes($json))`。
-这只是测试工具的问题——浏览器/axios 提交与 ASP.NET Core 接收链路本身没有编码缺陷。验证库内字符用
-`SELECT UNICODE(col)`（真乱码码点为 63，控制台 `??` 显示问题不影响实际数据）。
 
 ### 数据库访问（Ivan.Data）
 

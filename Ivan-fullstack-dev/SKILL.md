@@ -110,7 +110,7 @@ description: Ivan 的全栈 Web 项目开发 Skill。当需要从零开发一个
 2. **NuGet 源（必须）**：后端项目根目录必须包含 `nuget.config`（模板已内置）。`Ivan.*` 等内部库从私有源获取：`http://61.169.209.58:19081/repository/nuget-hosted/`（账号 `apps` / 密码 `123456`，凭据已写入 nuget.config 的 `packageSourceCredentials`，不要提交到公共仓库）。若用户需要其他 Ivan 开头的库，直接在 csproj 中添加 `PackageReference`，还原时自动走该源。
 3. 配置 `appsettings.json` 中的 `ConnectionStrings:Default`、`Database:Provider`（`mssql`/`mysql`/`sqlite`）与 `Jwt` 配置节。
 4. 按 `assets/backend-template/` 中模板搭建分层：Models（Generate/ + partial 扩展）→ DAL（Interface + BaseDAL 实现）→ BLL（Interface + BaseBLL 实现 + 手动 Service）→ Controllers。
-5. **启动模式（必须，参照 SaminWeb）**：`Program.cs` 按四步固定流程编写——① `DatabaseInfo.SetMsSqlDatabase("default", conn)` 等注册连接串 → ② `ContextHelper.UseServiceProvider = false` + `builder.Host.AddIvanIOC(程序集数组, ...)` 扫描 `[InjectIOC]` 接口自动注册，回调中调用 `IOCInitExtensions.OnInit(builder)` → ③ 手动服务（`AuthService`/`UsersBLL` 等）用 `services.AddScoped` 注册，其依赖的 `IUsersBLL` 等接口由容器解析 → ④ 中间件管道。**禁止**再直接注册带 `[InjectIOC]` 接口的实现类（如 `AddScoped<UsersBLL>()`）。
+5. **启动模式（必须，参照 SaminWeb）**：`Program.cs` 按四步固定流程编写——① `DatabaseInfo.SetMsSqlDatabase("default", conn)` 等注册连接串 → ② `ContextHelper.UseServiceProvider = false` + `builder.Host.AddIvanIOC(程序集数组, ...)` 扫描 `[InjectIOC]` 接口自动注册，回调中调用 `IOCInitExtensions.OnInit(builder)` → ③ 手动服务（`AuthService`/`UserManageService` 等）用 `services.AddScoped` 注册，其依赖的 `IUsersBLL` 等接口由容器解析 → ④ 中间件管道。**禁止**再直接注册带 `[InjectIOC]` 接口的实现类（如 `AddScoped<UsersBLL>()`）。
 6. **using 引用（必须）**：本 skill 的后端为单项目分层（Models/DAL/BLL/Controllers 同在一个 csproj），生成各层代码时必须自动补充跨层 using，规则见 `references/backend-guide.md` 的"跨层 using 引用规则"一节（含 Ivan.Data/Ivan.Common 框架命名空间与各层 Interface 命名空间的完整对照表）。
 7. 统一 API 响应格式（`ApiResult<T>`），统一异常处理中间件。
 8. 若需要认证：启用 JWT Bearer 认证 + 用户/角色表 + 登录接口。

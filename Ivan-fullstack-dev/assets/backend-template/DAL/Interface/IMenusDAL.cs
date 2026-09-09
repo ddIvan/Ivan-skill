@@ -11,13 +11,11 @@ using IvanProject.Models;
 namespace IvanProject.DAL.Interface;
 
 /// <summary>
-/// Users数据层接口
+/// Menus数据层接口
 /// </summary>
 [Ivan.IOC.Core.Attributes.InjectIOC]
-public interface IUsersDAL : IBaseDAL<Users>
+public interface IMenusDAL : IBaseDAL<Menus>
 {
-    List<Users> Search(PageSearchModel searchModel, out int totalRecordCount);
-
-    /// <summary>按用户名精准查询（用于登录/注册唯一性校验）</summary>
-    Users? GetByUserName(string userName);
+    /// <summary>按路由路径精准查询</summary>
+    Menus? GetByPath(string path);
 }

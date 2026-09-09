@@ -29,11 +29,10 @@ public class AuthService
         _config = config;
     }
 
-    /// <summary>登录：校验用户名密码，签发 JWT</summary>
+    /// <summary>登录：通过 DAL.GetByUserName 精准查询，校验用户名密码，签发 JWT</summary>
     public LoginResult Login(LoginRequest request)
     {
-        var allUsers = _usersBLL.GetALL();
-        var user = allUsers.FirstOrDefault(u => u.UserName == request.UserName)
+        var user = _usersBLL.GetByUserName(request.UserName)
             ?? throw new BusinessException("用户名或密码错误");
 
         if (!VerifyPassword(request.Password, user.PasswordHash))
@@ -55,11 +54,10 @@ public class AuthService
         };
     }
 
-    /// <summary>获取当前登录用户信息</summary>
+    /// <summary>获取当前登录用户信息（精准查询）</summary>
     public LoginResult GetProfile(string userName)
     {
-        var allUsers = _usersBLL.GetALL();
-        var user = allUsers.FirstOrDefault(u => u.UserName == userName)
+        var user = _usersBLL.GetByUserName(userName)
             ?? throw new BusinessException("用户不存在");
         return new LoginResult
         {
@@ -70,11 +68,10 @@ public class AuthService
         };
     }
 
-    /// <summary>注册：用户名已存在则报错</summary>
+    /// <summary>注册：通过精准查询检查用户名是否已存在</summary>
     public int Register(string userName, string password, string? displayName)
     {
-        var allUsers = _usersBLL.GetALL();
-        if (allUsers.Any(u => u.UserName == userName))
+        if (_usersBLL.GetByUserName(userName) != null)
         {
             throw new BusinessException("用户名已存在");
         }
@@ -85,7 +82,7 @@ public class AuthService
             DisplayName = displayName ?? userName,
             Role = "user",
             IsEnabled = true,
-            CreateTime = DateTime.Now
+            CreatedAt = DateTime.Now
         };
         // 使用 BLL 的 Create 方法（内部调用 DAL.InsertForGeneratedKey）
         var result = _usersBLL.Create(user);

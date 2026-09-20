@@ -26,23 +26,40 @@ request.interceptors.request.use((config) => {
 
 // 响应拦截：统一解包 ApiResult
 request.interceptors.response.use(
-  (response) => {
+  (response): any => {
     const res = response.data as ApiResult
     if (res.code === 0) {
       return res.data
     }
-    if (res.code === 401) {
+    // 401 / 403 统一视为认证/授权问题
+    if (res.code === 401 || res.code === 403) {
       const userStore = useUserStore()
       userStore.clear()
-      ElMessage.error('登录已过期，请重新登录')
+      ElMessage.error(res.message || '权限不足，请重新登录')
       router.push('/login')
     } else {
+      // 业务错误：使用后端返回的 message（精确错误信息从服务端来）
       ElMessage.error(res.message || '请求失败')
     }
     return Promise.reject(new Error(res.message || 'Error'))
   },
   (error) => {
-    ElMessage.error(error.message || '网络异常')
+    // 网络 / HTTP 非 200 状态码。
+    // HTTP 401/403：token 失效（如浏览器 localStorage 残留旧项目签发的 token）或权限不足，
+    // 清除本地登录态并跳转登录页，避免所有请求反复 401
+    const status = error.response?.status
+    if (status === 401 || status === 403) {
+      const userStore = useUserStore()
+      userStore.clear()
+      ElMessage.error(status === 401 ? '登录已失效，请重新登录' : '权限不足，禁止访问')
+      router.push('/login')
+      return Promise.reject(error)
+    }
+    // 尝试从 error.response.data 解包服务端错误信息，
+    // 若后端返回了 ApiResult 格式的错误（如 400 参数验证失败），优先使用其 message
+    const apiResult = error.response?.data as ApiResult | undefined
+    const errorMsg = apiResult?.message || error.message || '网络异常'
+    ElMessage.error(errorMsg)
     return Promise.reject(error)
   }
 )

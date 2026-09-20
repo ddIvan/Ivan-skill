@@ -6,7 +6,6 @@ using System.Linq;
 using Ivan.Data;
 using Ivan.Common;
 using Dapper;
-using Ivan.Data.SQLBuilder;
 using IvanProject.Models;
 using IvanProject.DAL.Interface;
 
@@ -42,14 +41,14 @@ public partial class RoleMenusDAL
     public override RoleMenus Select(RoleMenus value)
     {
         string sql = "SELECT * FROM RoleMenus (nolock) WHERE Id = @Id";
-        return SelectFirst(sql, value);
+        return DbHelper.Connection.Query<RoleMenus>(sql, value).FirstOrDefault();
     }
 
     /// <summary>按角色ID查询关联的菜单ID列表（SQL 层过滤）</summary>
     public List<int> GetMenuIdsByRoleId(int roleId)
     {
         string sql = "SELECT MenuId FROM RoleMenus (nolock) WHERE RoleId = @RoleId";
-        return SelectList(sql, new { RoleId = roleId }).Select(r => r.MenuId).ToList();
+        return DbHelper.Connection.Query<RoleMenus>(sql, new { RoleId = roleId }).Select(r => r.MenuId).ToList();
     }
 
     /// <summary>删除指定角色的所有菜单关联（SQL 层 DELETE）</summary>

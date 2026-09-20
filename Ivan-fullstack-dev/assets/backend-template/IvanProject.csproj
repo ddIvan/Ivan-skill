@@ -21,9 +21,11 @@
     <!--
       其他 Ivan 系列内部库（按需启用），还原时自动走 nuget.config 中的 IvanNuGet 源：
       <PackageReference Include="Ivan.Log" Version="1.0.7" />
-      <PackageReference Include="Ivan.Redis" Version="1.0.0" />
       <PackageReference Include="Ivan.Security" Version="1.0.0" />
     -->
+    <!-- Redis 缓存支持：RedisCacheService（ICacheService 生产实现）依赖 Ivan.Redis。
+         MenuCacheService 基于 IMemoryCache，无需此包。 -->
+    <PackageReference Include="Ivan.Redis" Version="1.0.0" />
   </ItemGroup>
 
 </Project>

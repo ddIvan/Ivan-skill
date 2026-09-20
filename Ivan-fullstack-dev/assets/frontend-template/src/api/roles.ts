@@ -8,13 +8,6 @@ export interface Role {
   createTime?: string
 }
 
-export interface RoleMenuButton {
-  id: number
-  roleId: number
-  menuId: number
-  buttonKey: string
-}
-
 export interface PageResult<T> {
   total: number
   items: T[]
@@ -58,14 +51,4 @@ export function getRoleMenus(id: number) {
 /** 保存角色的菜单权限 */
 export function saveRoleMenus(id: number, menuIds: number[]) {
   return request.put<unknown, void>(`/roles/${id}/menus`, menuIds)
-}
-
-/** 获取角色的按钮权限 */
-export function getRoleButtons(id: number) {
-  return request.get<unknown, RoleMenuButton[]>(`/roles/${id}/buttons`)
-}
-
-/** 保存角色的按钮权限 */
-export function saveRoleButtons(id: number, menuId: number, buttonKeys: string[]) {
-  return request.put<unknown, void>(`/roles/${id}/buttons`, { menuId, buttonKeys })
 }

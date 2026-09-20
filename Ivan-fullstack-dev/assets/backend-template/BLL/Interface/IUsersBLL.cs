@@ -23,4 +23,13 @@ public interface IUsersBLL : IBaseBLL<Users>
     Users? GetByUserName(string userName);
     ResultModel Modify(Users model);
     ResultModel Remove(int id);
+
+    /// <summary>获取用户的角色ID列表（多角色支持）</summary>
+    List<int> GetUserRoleIds(int userId);
+
+    /// <summary>获取用户的完整角色列表（多角色支持）</summary>
+    List<Roles> GetUserRoles(int userId);
+
+    /// <summary>保存用户-角色关联（全量替换：DELETE + INSERT，事务保证）</summary>
+    void SaveUserRoles(int userId, List<int> roleIds);
 }

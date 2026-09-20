@@ -7,8 +7,12 @@ import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 
 import App from './App.vue'
 import router from './router'
+import { vPerm } from './directives/perm'
 
 const app = createApp(App)
+
+// 按钮级权限指令
+app.directive('perm', vPerm)
 
 // 全局注册 Element Plus 图标
 for (const [key, component] of Object.entries(ElementPlusIconsVue)) {

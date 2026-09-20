@@ -47,7 +47,11 @@ builder.Host.AddIvanIOC(assemblies,
     },
     services =>
     {
-        services.AddControllers()
+        services.AddControllers(o =>
+            {
+                // 注册 PermAuthorizationFilter 全局权限校验过滤器
+                o.Filters.Add<PermAuthorizationFilter>();
+            })
             .AddJsonOptions(options =>
             {
                 // 统一日期序列化格式：yyyy-MM-dd（可空日期输出 null；反序列化兼容完整时间戳）
@@ -85,7 +89,32 @@ builder.Host.AddIvanIOC(assemblies,
         //    禁止再直接注册带 [InjectIOC] 接口的实现类（如 AddScoped<UsersBLL>()），会重复注册。
         services.AddScoped<AuthService>();
         services.AddScoped<RolePermissionService>();
-        services.AddMemoryCache();
+        services.AddScoped<PermAuthorizationFilter>();
+
+        // ==================== 缓存服务配置 ====================
+        //
+        // 缓存体系说明：
+        //   1. ICacheService（通用缓存接口）→ 用于 RolePermissionService 等权限/业务缓存
+        //   2. MenuCacheService（菜单专用缓存）→ 直接使用 Ivan.Redis 的 RedisClient
+        //
+        // 环境切换（修改 ICacheService 注册即可）：
+        //   开发/单机环境：MemoryCacheService（进程内内存缓存，无需 Redis）
+        //   生产/分布式环境：RedisCacheService（Ivan.Redis 实现，支持集群共享缓存）
+        //
+        // 切换为 RedisCacheService 的步骤：
+        //   1. csproj 中取消注释 <PackageReference Include="Ivan.Redis" Version="1.0.1" />
+        //   2. appsettings.json 中添加 Redis 配置节：
+        //      "Redis": { "ConfigKey": "Default", "ConnectionString": "127.0.0.1:6379,password=xxx" }
+        //   3. 将下面的 MemoryCacheService 替换为 RedisCacheService
+        // ====================
+
+        // MenuCacheService 使用 singleton 生命周期，确保缓存在整个应用范围内共享
+        services.AddSingleton<MenuCacheService>();
+
+        // 通用缓存服务：开发环境用 MemoryCacheService，生产环境切换为 RedisCacheService
+        services.AddMemoryCache();  // MemoryCacheService 依赖 IMemoryCache
+        services.AddSingleton<ICacheService, MemoryCacheService>();
+        // services.AddSingleton<ICacheService, RedisCacheService>();  // 生产环境取消注释并注释上一行
 
         // JWT 认证
         services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
@@ -101,6 +130,25 @@ builder.Host.AddIvanIOC(assemblies,
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]!)),
                     ValidateLifetime = true,
                     ClockSkew = TimeSpan.Zero
+                };
+
+                // 认证失败/未携带 token（如 localStorage 残留旧项目签发的 token）：
+                // 返回统一 ApiResult（HTTP 200 + code=401），前端拦截器可解析并引导重新登录
+                options.Events = new JwtBearerEvents
+                {
+                    OnChallenge = async context =>
+                    {
+                        context.HandleResponse();
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(ApiResult.Fail("登录已失效，请重新登录", 401));
+                    },
+                    OnForbidden = async context =>
+                    {
+                        context.Response.StatusCode = StatusCodes.Status200OK;
+                        context.Response.ContentType = "application/json";
+                        await context.Response.WriteAsJsonAsync(ApiResult.Fail("权限不足，禁止访问", 403));
+                    }
                 };
             });
 

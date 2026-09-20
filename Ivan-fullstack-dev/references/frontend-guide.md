@@ -63,6 +63,31 @@ frontend/
 - 弹窗表单使用 `el-dialog` + `el-form`，表单校验用 `rules`。
 - 所有接口调用必须经过 `src/api/` 下的函数，禁止在页面里直接写 `axios.get(...)`。
 
+### 按钮级权限（v-perm 指令）
+
+模板在 `main.ts` 全局注册了 `v-perm` 指令（`src/directives/perm.ts`），用于按登录用户的按钮权限动态控制页面元素的**显示、隐藏或禁用**：
+
+```vue
+<!-- 单个权限 Key：无 add 权限时按钮被移除 -->
+<el-button v-perm="'add'" type="success" @click="openDialog()">新增用户</el-button>
+
+<!-- 多个 Key：任一命中即显示 -->
+<el-button v-perm="['edit', 'permission']">编辑或分配权限</el-button>
+
+<!-- disable 模式：无权限时禁用置灰（不移除），响应 updated 更新 -->
+<el-button v-perm:disable="'export'">导出</el-button>
+```
+
+**规则**：
+- 权限数据来自登录接口返回的 `buttonPermissions = { "/users": ["view","add","edit","delete"] }`，由 `userStore.hasButton(route.path, key)` 判定；完整权限代码 = `{resource}:{key}`（resource 由菜单路由路径派生，如 `/users` → `users`），与后端 `[RequirePerm("users:add")]`、菜单树按钮节点的 `PermissionCode` 三处一一对应。
+- 按钮即菜单树节点（MenuType=3，挂在页面菜单下）：权限编码（PermissionCode）与绑定接口（ControllerAction）在菜单管理页维护；角色权限分配弹窗为统一权限树直接勾选（按钮叶子显示权限编码标签），勾选即自动保存。
+- Key 与角色权限分配界面（角色管理 → 权限）中的树勾选一一对应；`view` 必须作为按钮节点存在（种子已内置），否则页面级 `[RequirePerm("{path}:view")]` 无法通过。
+- 无任何操作权限时整列隐藏：操作列用 `v-if="canSeeOps"`（`hasButton('edit') || hasButton('delete')`）控制。
+- 指令在 `mounted` 时判定并直接移除元素（remove 模式），不响应运行时权限变化（页面刷新/重新登录后生效）；`disable` 模式响应 `updated` 钩子。
+- 菜单管理页是按钮节点维护的参考实现（`src/views/menus/index.vue`）：树表"类型"列显示 `目录/菜单/按钮` 标签（按钮附权限编码标签），操作列"权限管理"打开按钮子节点表格弹窗（名称/权限编码/绑定接口/启用/编辑删除，"新增按钮"预填 `{resource}:` 前缀）；编辑弹窗按节点类型动态切换字段，"绑定接口"下拉数据来自 `GET /api/menus/bindable-actions`（选项展示 HTTP 方法/路由/[RequirePerm] 声明编码）。
+- 标签统一展示权限编码，让后端 `[RequirePerm("{resource}:{action}")]`、前端 `v-perm` 的 Key、菜单树按钮节点三处可直接对照。
+- 参考实现：`src/views/users/index.vue`（用户管理页，含新增/编辑/删除的完整权限示例）。
+
 ## 与后端联调
 
 - 开发期建议 `vite.config.ts` 配置 proxy，避免跨域：

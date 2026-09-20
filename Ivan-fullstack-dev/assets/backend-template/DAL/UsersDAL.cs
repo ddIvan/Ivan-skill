@@ -6,7 +6,6 @@ using System.Linq;
 using Ivan.Data;
 using Ivan.Common;
 using Dapper;
-using Ivan.Data.SQLBuilder;
 using IvanProject.Models;
 using IvanProject.DAL.Interface;
 
@@ -26,15 +25,16 @@ public partial class UsersDAL
     {
     }
 
-    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, Role, CreatedAt, IsEnabled)
-                             VALUES (@UserName, @PasswordHash, @DisplayName, @Role, @CreatedAt, @IsEnabled)";
+    // 注意：Users 表不包含 Role 字段，多角色通过 UserRoles 关联表实现
+    protected override string InsertSql => @"INSERT into Users (UserName, PasswordHash, DisplayName, CreateTime, IsEnabled)
+                             VALUES (@UserName, @PasswordHash, @DisplayName, @CreateTime, @IsEnabled)";
 
     protected override string InsertSqlForGeneratedKey => InsertSql + ";select SCOPE_IDENTITY();";
 
     protected override string DeleteSql => @"DELETE from Users WHERE Id = @Id";
 
     protected override string UpdateSql => @"UPDATE Users SET UserName=@UserName, PasswordHash=@PasswordHash, DisplayName=@DisplayName, 
-                                    Role=@Role, CreatedAt=@CreatedAt, IsEnabled=@IsEnabled
+                                    CreateTime=@CreateTime, IsEnabled=@IsEnabled
                                     where Id = @Id";
 
     protected override string SelectAllSql => @"select * from Users (nolock)";
@@ -47,34 +47,35 @@ public partial class UsersDAL
     public override Users Select(Users value)
     {
         string sql = "SELECT * FROM Users (nolock) WHERE Id = @Id";
-        return SelectFirst(sql, value);
+        return DbHelper.Connection.Query<Users>(sql, value).FirstOrDefault();
     }
 
     /// <summary>按用户名精准查询（SQL 层 WHERE，禁止全表加载后内存过滤）</summary>
     public Users? GetByUserName(string userName)
     {
         string sql = "SELECT * FROM Users (nolock) WHERE UserName = @UserName";
-        return SelectFirst(sql, new { UserName = userName });
+        return DbHelper.Connection.Query<Users>(sql, new { UserName = userName }).FirstOrDefault();
     }
 
-    /// <summary>分页搜索（SQL 层分页，OFFSET/FETCH）</summary>
+    /// <summary>分页搜索（SQL 层过滤 + OFFSET/FETCH 分页）</summary>
     public List<Users> Search(PageSearchModel searchModel, out int totalRecordCount)
     {
-        var builder = new SQLBuilder("select count(1) from Users (nolock)", SqlType);
-        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
+        string where = "1=1";
+        object? param = null;
+        var keyword = searchModel.TryGetModelValue("keyword", out var kw) ? kw : null;
+        if (!string.IsNullOrWhiteSpace(keyword))
         {
-            builder.AddWhere("(UserName like '%' + @Keyword + '%' or DisplayName like '%' + @Keyword + '%')");
+            where = "(UserName like '%' + @Keyword + '%' or DisplayName like '%' + @Keyword + '%')";
+            param = new { Keyword = keyword };
         }
-        totalRecordCount = CountBySql(builder.SQL, builder.GetDynamicParameters(searchModel));
 
-        builder = new SQLBuilder("select * from Users (nolock)", SqlType);
-        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
-        {
-            builder.AddWhere("(UserName like '%' + @Keyword + '%' or DisplayName like '%' + @Keyword + '%')");
-        }
-        builder.AddOrderBy("Id desc");
-        builder.AddPageSize(searchModel.PageIndex, searchModel.PageSize);
-        return SelectList(builder.SQL, builder.GetDynamicParameters(searchModel)).ToList();
+        string countSql = $"select count(1) from Users (nolock) where {where}";
+        string dataSql = $"select * from Users (nolock) where {where}";
+
+        // SelectByPage 的页码为 0-based（MsSql rownumber>page*size / MySQL limit page*size），
+        // PageSearchModel.Page 为 1-based（从 1 开始），此处必须 -1，否则首页会跳过前 N 条数据
+        var page = SelectByPage<Users>(dataSql, searchModel.Page - 1, searchModel.Limit, out totalRecordCount, param, "Id desc");
+        return page.ToList();
     }
 
     #endregion

@@ -93,4 +93,58 @@ public partial class UsersBLL
         }
         return ResultModel.BuildSuccess();
     }
+
+    #region 用户-角色关联（多角色支持）
+
+    /// <summary>获取用户的角色ID列表</summary>
+    public List<int> GetUserRoleIds(int userId)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            return session.CreateDAL<IUserRolesDAL>().GetRoleIdsByUserId(userId);
+        }
+    }
+
+    /// <summary>获取用户的完整角色列表（仅启用的角色）</summary>
+    public List<Roles> GetUserRoles(int userId)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            return session.CreateDAL<IUserRolesDAL>().GetRolesByUserId(userId);
+        }
+    }
+
+    /// <summary>保存用户-角色关联（全量替换：DELETE + INSERT，事务保证）</summary>
+    public void SaveUserRoles(int userId, List<int> roleIds)
+    {
+        using (var session = Factory.OpenSession())
+        {
+            session.BeginTrans();
+            try
+            {
+                var dal = session.CreateDAL<IUserRolesDAL>();
+                // 先删除原有全部关联
+                dal.DeleteByUserId(userId);
+                // 再插入新关联（去重，忽略空列表）
+                var distinctIds = roleIds?.Distinct() ?? Enumerable.Empty<int>();
+                foreach (var roleId in distinctIds)
+                {
+                    dal.Insert(new UserRoles
+                    {
+                        UserId = userId,
+                        RoleId = roleId,
+                        CreateTime = DateTime.Now
+                    });
+                }
+                session.CommitTrans();
+            }
+            catch
+            {
+                session.RollbackTrans();
+                throw;
+            }
+        }
+    }
+
+    #endregion
 }

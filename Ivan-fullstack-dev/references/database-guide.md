@@ -59,6 +59,39 @@ Server=localhost;Port=3306;Database=IvanProject;User=root;Password=your_password
 
 选择 Migration 时需安装 `dotnet-ef` 工具：`dotnet tool install --global dotnet-ef`。
 
+## 一体化 SQL 初始化脚本（MSSQL）
+
+模板 `assets/database/init_database.sql` 将全部表结构与种子数据合并为**单个幂等脚本**（重复执行不产生脏数据），覆盖：
+
+- Users / Roles / Menus（统一权限树：MenuType 1=目录 2=菜单 3=按钮，层次结构内建 ParentId + FullPath + Level，按钮节点携带 PermissionCode + ControllerAction）/ RoleMenus（唯一授权关联）/ UserRoles
+- 种子数据：admin 账户（admin123，PBKDF2 哈希）、默认角色、18 节点菜单树（系统管理目录 + 首页/用户/角色/菜单 4 菜单 + 13 按钮节点，PermissionCode 与 Controller 内 `[RequirePerm]` 声明一致）、admin↔admin 角色绑定、admin 角色全量授权
+- 种子不硬编码 Id，按 UserName/Code/Path/名称锚定变量关联插入；菜单 FullPath 最后统一递归计算
+
+执行方式（含中文脚本必须 `-f 65001`，否则中文乱码/插入失败）：
+
+```bash
+sqlcmd -S tcp:127.0.0.1 -U sa -P <密码> -d <数据库名> -i init_database.sql -f 65001
+```
+
+执行完成后脚本末尾自带验证查询（菜单动作配置、用户-角色绑定）。
+
+## 默认账户与密码哈希（种子数据规范）
+
+启用登录认证的项目，初始化脚本需要内置默认管理员账户（admin / admin123）。密码哈希必须与 `AuthService` 的算法一致：
+
+- **算法**：PBKDF2，迭代 10000 次，SHA256，盐 16 字节，哈希 32 字节。
+- **存储格式**：`base64(salt).base64(hash)`，例如 `AQIDBAUGBwgJCgsMDQ4PEA==.SJ34IaoONdCI30nVhP7h41dba31Qp+CGBYhy6bY72To=`（即 admin123 的 PBKDF2 哈希）。
+- **注意**：不要使用 BCrypt 等其他格式（如 `$2a$` 开头）。`AuthService.VerifyPassword` 按 `.` 拆分为两段校验，其他格式会导致登录必然失败（提示"用户名或密码错误"）。
+
+种子脚本示例：
+
+```sql
+INSERT INTO Users (UserName, PasswordHash, DisplayName, CreateTime, IsEnabled)
+VALUES ('admin', 'AQIDBAUGBwgJCgsMDQ4PEA==.SJ34IaoONdCI30nVhP7h41dba31Qp+CGBYhy6bY72To=', N'系统管理员', GETDATE(), 1);
+```
+
+若需修改默认密码，用与 `AuthService.HashPassword` 相同算法重新生成后再写入。
+
 ## 注意事项
 
 - 不要在生产连接字符串中硬编码密码；IIS 场景可改用环境变量或 Web.config 的 `appSettings` 覆盖。

@@ -25,9 +25,6 @@ public partial class Users
     /// <summary>显示名称</summary>
     public string? DisplayName { get; set; }
 
-    /// <summary>角色</summary>
-    public string Role { get; set; } = "user";
-
     /// <summary>创建时间</summary>
     public DateTime? CreateTime { get; set; }
 

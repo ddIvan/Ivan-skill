@@ -6,7 +6,6 @@ using System.Linq;
 using Ivan.Data;
 using Ivan.Common;
 using Dapper;
-using Ivan.Data.SQLBuilder;
 using IvanProject.Models;
 using IvanProject.DAL.Interface;
 
@@ -43,34 +42,35 @@ public partial class RolesDAL
     public override Roles Select(Roles value)
     {
         string sql = "SELECT * FROM Roles (nolock) WHERE Id = @Id";
-        return SelectFirst(sql, value);
+        return DbHelper.Connection.Query<Roles>(sql, value).FirstOrDefault();
     }
 
     /// <summary>按编码精准查询（SQL 层 WHERE，禁止全表加载后内存过滤）</summary>
     public Roles? GetByCode(string code)
     {
         string sql = "SELECT * FROM Roles (nolock) WHERE Code = @Code";
-        return SelectFirst(sql, new { Code = code });
+        return DbHelper.Connection.Query<Roles>(sql, new { Code = code }).FirstOrDefault();
     }
 
-    /// <summary>分页搜索（SQL 层分页，OFFSET/FETCH）</summary>
+    /// <summary>分页搜索（SQL 层过滤 + OFFSET/FETCH 分页）</summary>
     public List<Roles> Search(PageSearchModel searchModel, out int totalRecordCount)
     {
-        var builder = new SQLBuilder("select count(1) from Roles (nolock)", SqlType);
-        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
+        string where = "1=1";
+        object? param = null;
+        var keyword = searchModel.TryGetModelValue("keyword", out var kw) ? kw : null;
+        if (!string.IsNullOrWhiteSpace(keyword))
         {
-            builder.AddWhere("(Name like '%' + @Keyword + '%' or Code like '%' + @Keyword + '%')");
+            where = "(Name like '%' + @Keyword + '%' or Code like '%' + @Keyword + '%')";
+            param = new { Keyword = keyword };
         }
-        totalRecordCount = CountBySql(builder.SQL, builder.GetDynamicParameters(searchModel));
 
-        builder = new SQLBuilder("select * from Roles (nolock)", SqlType);
-        if (!string.IsNullOrWhiteSpace(searchModel.Keyword))
-        {
-            builder.AddWhere("(Name like '%' + @Keyword + '%' or Code like '%' + @Keyword + '%')");
-        }
-        builder.AddOrderBy("Id desc");
-        builder.AddPageSize(searchModel.PageIndex, searchModel.PageSize);
-        return SelectList(builder.SQL, builder.GetDynamicParameters(searchModel)).ToList();
+        string countSql = $"select count(1) from Roles (nolock) where {where}";
+        string dataSql = $"select * from Roles (nolock) where {where}";
+
+        // SelectByPage 的页码为 0-based（MsSql rownumber>page*size / MySQL limit page*size），
+        // PageSearchModel.Page 为 1-based（从 1 开始），此处必须 -1，否则首页会跳过前 N 条数据
+        var page = SelectByPage<Roles>(dataSql, searchModel.Page - 1, searchModel.Limit, out totalRecordCount, param, "Id desc");
+        return page.ToList();
     }
 
     #endregion

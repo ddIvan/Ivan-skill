@@ -15,6 +15,7 @@ namespace IvanProject.Controllers;
 [ApiController]
 [Route("api/roles")]
 [Authorize]
+[RequirePerm("roles:view")]
 public class RolesController : ControllerBase
 {
     private readonly IRolesBLL _rolesBLL;
@@ -61,6 +62,7 @@ public class RolesController : ControllerBase
     }
 
     /// <summary>新增角色</summary>
+    [RequirePerm("roles:add")]
     [HttpPost]
     public ApiResult<int> Create(Roles role)
     {
@@ -69,6 +71,7 @@ public class RolesController : ControllerBase
     }
 
     /// <summary>更新角色</summary>
+    [RequirePerm("roles:edit")]
     [HttpPut("{id:int}")]
     public ApiResult Update(int id, Roles role)
     {
@@ -78,6 +81,7 @@ public class RolesController : ControllerBase
     }
 
     /// <summary>删除角色</summary>
+    [RequirePerm("roles:delete")]
     [HttpDelete("{id:int}")]
     public ApiResult Delete(int id)
     {
@@ -93,26 +97,11 @@ public class RolesController : ControllerBase
     }
 
     /// <summary>保存角色的菜单权限</summary>
+    [RequirePerm("roles:permission")]
     [HttpPut("{id:int}/menus")]
     public ApiResult SaveRoleMenus(int id, List<int> menuIds)
     {
         _permService.SaveRoleMenus(id, menuIds);
         return ApiResult.Ok("菜单权限保存成功");
-    }
-
-    /// <summary>获取角色的按钮权限</summary>
-    [HttpGet("{id:int}/buttons")]
-    public ApiResult<List<RoleMenuButtons>> GetRoleButtons(int id)
-    {
-        return ApiResult<List<RoleMenuButtons>>.Ok(_permService.GetRoleButtons(id));
-    }
-
-    /// <summary>保存角色的按钮权限</summary>
-    [HttpPut("{id:int}/buttons")]
-    public ApiResult SaveRoleButtons(int id, RoleButtonPermissionRequest request)
-    {
-        request.RoleId = id;
-        _permService.SaveRoleButtons(id, request.MenuId, request.ButtonKeys);
-        return ApiResult.Ok("按钮权限保存成功");
     }
 }

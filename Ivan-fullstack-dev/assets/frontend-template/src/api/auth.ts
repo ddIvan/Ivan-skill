@@ -9,7 +9,8 @@ export interface LoginResult {
   token: string
   userName: string
   displayName: string
-  role: string
+  /** 角色编码列表（支持多角色） */
+  roles: string[]
   menuIds: number[]
   buttonPermissions: Record<string, string[]>
 }

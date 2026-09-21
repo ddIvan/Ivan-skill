@@ -78,4 +78,6 @@ backend/
 dotnet publish -c Release -o ./publish
 ```
 
-将 `publish/` 复制到 IIS 站点物理路径，根目录放入 `assets/web.config`（把 `arguments` 改为实际 dll 名），应用池 .NET CLR 选"无托管代码"。详见 `references/iis-deploy-guide.md`。
+`web.config` 已随项目一并生成于后端根目录（内容为 IIS 托管配置，`arguments` 中 DLL 名已替换为实际程序集）。Web SDK 默认会把根目录的 `web.config` 带入发布目录；若 `publish/` 中没有，请手动把 `web.config` 复制进去。
+
+将 `publish/` 复制到 IIS 站点物理路径，应用池 .NET CLR 选"无托管代码"，然后验证 `/swagger/index.html` 与 `/api` 接口。详见 `references/iis-deploy-guide.md`。

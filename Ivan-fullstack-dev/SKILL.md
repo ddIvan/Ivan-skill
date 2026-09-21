@@ -112,6 +112,7 @@ description: Ivan 的全栈 Web 项目开发 Skill。当需要从零开发一个
 │   ├── DTOs/                  # 传输对象
 │   ├── Program.cs
 │   ├── appsettings.json
+│   ├── web.config             # IIS 托管配置（arguments 替换为实际 DLL 名）
 │   └── <ProjectName>.csproj
 └── README.md                  # 项目说明 + 启动/部署步骤
 ```
@@ -119,6 +120,7 @@ description: Ivan 的全栈 Web 项目开发 Skill。当需要从零开发一个
 **目录说明**：
 - `database/`：数据库相关文件（建表 SQL、种子数据脚本等）独立存放，不再混入 `backend/` 内部。
 - `frontend/` 和 `backend/` 目录职责不变。
+- `backend/web.config`：IIS 托管 ASP.NET Core 后端所需配置（模板见 `assets/backend-template/web.config`），生成项目时随后端一并产出，DLL 名取 `<ProjectName>`。
 
 先创建后端再创建前端，保证前端联调时后端 API 已可访问。
 
@@ -129,7 +131,7 @@ description: Ivan 的全栈 Web 项目开发 Skill。当需要从零开发一个
 1. 创建 .NET 6.0 Web API 项目，核心包：`Ivan.Common`、`Ivan.Data`、`Ivan.Data.IOC`、`Ivan.IOC`（均从私有源还原）+ `System.Data.SqlClient`（按数据库选驱动）+ `Swashbuckle.AspNetCore` + `Microsoft.AspNetCore.Authentication.JwtBearer`。
 2. **NuGet 源（必须）**：后端项目根目录必须包含 `nuget.config`（模板已内置）。`Ivan.*` 等内部库从私有源获取：`http://61.169.209.58:19081/repository/nuget-hosted/`（账号 `apps` / 密码 `123456`，凭据已写入 nuget.config 的 `packageSourceCredentials`，不要提交到公共仓库）。若用户需要其他 Ivan 开头的库，直接在 csproj 中添加 `PackageReference`，还原时自动走该源。
 3. 配置 `appsettings.json` 中的 `ConnectionStrings:Default`、`Database:Provider`（`mssql`/`mysql`/`sqlite`）与 `Jwt` 配置节。
-4. 按 `assets/backend-template/` 中模板搭建分层：Models（Generate/ + partial 扩展）→ DAL（Interface + BaseDAL 实现）→ BLL（Interface + BaseBLL 实现 + 手动 Service）→ Controllers。
+4. 按 `assets/backend-template/` 中模板搭建分层：Models（Generate/ + partial 扩展）→ DAL（Interface + BaseDAL 实现）→ BLL（Interface + BaseBLL 实现 + 手动 Service）→ Controllers。复制模板时**同时把 `backend-template/web.config` 一并复制到后端根目录**，并将其中 `arguments` 的 `.\IvanProject.dll` 替换为 `.\<ProjectName>.dll`（见第七步 IIS 部署）。
 5. **启动模式（必须，参照 SaminWeb）**：`Program.cs` 按四步固定流程编写——① `DatabaseInfo.SetMsSqlDatabase("default", conn)` 等注册连接串 → ② `ContextHelper.UseServiceProvider = false` + `builder.Host.AddIvanIOC(程序集数组, ...)` 扫描 `[InjectIOC]` 接口自动注册，回调中调用 `IOCInitExtensions.OnInit(builder)` → ③ 手动服务（`AuthService`/`UserManageService` 等）用 `services.AddScoped` 注册，其依赖的 `IUsersBLL` 等接口由容器解析 → ④ 中间件管道。**禁止**再直接注册带 `[InjectIOC]` 接口的实现类（如 `AddScoped<UsersBLL>()`）。
 6. **using 引用（必须）**：本 skill 的后端为单项目分层（Models/DAL/BLL/Controllers 同在一个 csproj），生成各层代码时必须自动补充跨层 using，规则见 `references/backend-guide.md` 的"跨层 using 引用规则"一节（含 Ivan.Data/Ivan.Common 框架命名空间与各层 Interface 命名空间的完整对照表）。
 7. 统一 API 响应格式（`ApiResult<T>`），统一异常处理中间件。
@@ -157,11 +159,16 @@ description: Ivan 的全栈 Web 项目开发 Skill。当需要从零开发一个
 
 ## 第七步：IIS 部署配置
 
-按 `references/iis-deploy-guide.md` 配置：
+按 `references/iis-deploy-guide.md` 配置。**IIS 部署是可选目标**：在第 1 步（需求澄清）确认"部署方式"为 IIS 时启用；若用户选择"仅本地运行"，此步可跳过。
 
-1. **后端**：发布为独立/框架依赖包，站点根目录放置 `web.config`（见 `assets/web.config`），启用 ASP.NET Core Module (ANCM) 托管；若站点被其他应用占用端口或需要 URL 重写，注意处理。
-2. **前端**：`npm run build` 后将 `dist/` 发布到站点，配 URL Rewrite 将非静态文件请求转发至后端 API（或后端设置 CORS 允许跨域直连）。
-3. 记录每个站点所需配置（端口、物理路径、应用池 .NET CLR 版本设为"无托管代码"）。
+**生成对应的 web.config（必须）**：IIS 部署场景下，须为项目**实际生成** `backend/web.config`，而不是只让用户参考静态模板手工改名：
+
+1. **后端 web.config**：
+   - 生成项目后端时，从 `assets/backend-template/web.config` 复制为 `backend/web.config`，并把 `arguments` 中的 `.\IvanProject.dll` **替换为实际 `.<ProjectName>.dll`**（DLL 名 = csproj 文件名）。
+   - 该文件已位于后端项目根目录，`dotnet publish -c Release -o ./publish` 后会随输出一起进入 `publish/`（Web SDK 默认包含根目录的 `web.config`）。若发布目录中没有，手动将 `backend/web.config` 复制到 `publish/` 根目录。
+2. **前端静态托管**：`npm run build` 后将 `dist/` 发布到前端站点，配 URL Rewrite 将非静态 / 非 `/api` 请求 rewrite 到 `index.html`（History 路由回退）并把 `/api/(.*)` 转发至后端（或后端 CORS 跨域直连，见 `references/iis-deploy-guide.md`）。
+3. **记录部署信息**：每个站点所需配置（端口、物理路径、应用池 .NET CLR 版本设为"无托管代码"）写入项目 `README.md` 的部署章节。
+4. **验证**：后端访问 `/swagger/index.html` 正常、返回统一 `ApiResult`；前端登录并成功请求 API；数据库对应用池账户可读写。详见 `references/iis-deploy-guide.md` 的"验证清单"。
 
 ## 错误处理、缓存与权限能力
 
@@ -262,9 +269,9 @@ var page = SelectByPage<Users>(dataSql, searchModel.Page - 1, searchModel.Limit,
 
 ### assets/（复制到项目中的模板）
 - `frontend-template/` — Vue3 + TS + Element Plus 前端脚手架模板
-- `backend-template/` — .NET 6.0 分层后端脚手架模板（含 nuget.config 私有源配置）
+- `backend-template/` — .NET 6.0 分层后端脚手架模板（含 nuget.config 私有源配置，与 `web.config` IIS 托管模板）
 - `database/` — 数据库初始化脚本模板（`init_database.sql`，与 backend-template 同级）
-- `web.config` — IIS 托管 ASP.NET Core 后端所需配置模板
+- `web.config` — IIS 托管 ASP.NET Core 后端所需配置模板（与 `backend-template/web.config` 同源，供独立参考）
 
 ### scripts/（可执行脚本）
 - 当前无需脚本；后续如需批量脚手架生成，在此目录添加。
